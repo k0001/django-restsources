@@ -68,7 +68,7 @@ class XMLRestponder(Restponder):
                     el.insert(i, cls.format_restsourcevalue(rv))
                 else:
                     raise TypeError(type(rv))
-                return el
+            return el
         elif isinstance(rv, RestsourceValueObjectCollection):
             el = ET.Element(rv.value['name'])
             for i,x in enumerate(rv.value['collection']):

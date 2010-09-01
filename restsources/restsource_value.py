@@ -25,7 +25,7 @@ class RestsourceValue(object):
         except KeyError:
             raise TypeError(type(value))
 
-class RestsourceValueUnicode(unicode, RestsourceValue):
+class RestsourceValueUnicode(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, unicode)
         self._value = value

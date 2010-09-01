@@ -64,6 +64,7 @@ class Restsource(object):
         data = self._get_fields_restsourcevalues(obj)
         return RestsourceValueObject(self.name, data, self.attributes)
 
+
     def dump_collection(self, objs):
         data = [self.dump_single(x) for x in objs]
         return RestsourceValueObjectCollection(self.name_plural, data)
