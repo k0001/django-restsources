@@ -22,9 +22,6 @@ class PythonRestponder(Restponder):
     extension = 'py'
     mimetype = 'application/x-python'
 
-    def __init__(self, encoding='utf8'):
-        self.encoding = encoding
-
     def write_body(self, restponse, response):
         data = self._format_restponse(restponse)
         response.write(unicode(data).encode(self.encoding))
@@ -59,8 +56,9 @@ class PythonPickleRestponder(PythonRestponder):
     extension = 'py_pickle'
     mimetype = 'application/octet-stream'
 
-    def __init__(self, protocol=2):
+    def __init__(self, protocol=2, *args, **kwargs):
         self.protocol = protocol
+        super(PythonPickleRestponder, self).__init__(*args, **kwargs)
 
     def write_body(self, restponse, response):
         data = self._format_restponse(restponse)

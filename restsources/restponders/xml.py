@@ -17,9 +17,6 @@ class XMLRestponder(Restponder):
     extension = 'xml'
     mimetype = 'application/xml'
 
-    def __init__(self, encoding='utf8'):
-        self.encoding = encoding
-
     def write_body(self, restponse, response):
         data = self._format_restponse(restponse)
         xml = ET.tostring(data, self.encoding)

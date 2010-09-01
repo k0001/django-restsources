@@ -8,6 +8,9 @@ class Restponder(object):
     mimetype = 'SET THIS TO THE PREFERED MIMETYPE'
     encoding = 'utf8'
 
+    def __init__(self, encoding='utf8'):
+        self.encoding = encoding
+
     @property
     def content_type(self):
         return '%s; charset=%s' % (self.mimetype, self.encoding)
