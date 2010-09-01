@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 
 from ..restsource_value import (RestsourceValueUnicode, RestsourceValueBytes,
                                 RestsourceValueInteger, RestsourceValueFloat,
+                                RestsourceValueDate, RestsourceValueDatetime,
                                 RestsourceValueObject, RestsourceValueObjectCollection)
 from . import Restponder
 
@@ -45,6 +46,8 @@ class XMLRestponder(Restponder):
             return rv.value
         elif isinstance(rv, (RestsourceValueInteger, RestsourceValueFloat)):
             return srt(rv.value)
+        elif isinstance(rv, (RestsourceValueDate, RestsourceValueDatetime)):
+            return rv.value.isoformat()
         raise TypeError(type(rv))
 
     @classmethod
@@ -62,7 +65,8 @@ class XMLRestponder(Restponder):
                 el.set(attr, cls._format_simple_restsourcevalue_as_text(data[attr]))
             for i,(k,rv) in enumerate(((x,y) for (x,y) in data.items() if not x in attributes)):
                 if isinstance(rv, (RestsourceValueUnicode, RestsourceValueBytes,
-                                   RestsourceValueInteger, RestsourceValueFloat)):
+                                   RestsourceValueInteger, RestsourceValueFloat,
+                                   RestsourceValueDate, RestsourceValueDatetime)):
                     el.insert(i, cls._format_simple_restsourcevalue_as_element(k, rv))
                 elif isinstance(rv, (RestsourceValueObject, RestsourceValueObjectCollection)):
                     el.insert(i, cls.format_restsourcevalue(rv))

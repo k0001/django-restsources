@@ -1,7 +1,10 @@
 # -*- coding: utf8 -*-
 
+from datetime import datetime, date
+
 __all__ = ('RestsourceValue', 'RestsourceValueUnicode', 'RestsourceValueBytes',
            'RestsourceValueInteger', 'RestsourceValueFloat',
+           'RestsourceValueDate', 'RestsourceValueDatetime',
            'RestsourceValueObject', 'RestsourceValueObjectCollection')
 
 
@@ -19,6 +22,8 @@ class RestsourceValue(object):
             int: RestsourceValueInteger,
             long: RestsourceValueInteger,
             float: RestsourceValueFloat,
+            date: RestsourceValueDate,
+            datetime: RestsourceValueDatetime,
         }
         try:
             return simple_types_map[type(value)](value)
@@ -44,6 +49,18 @@ class RestsourceValueFloat(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, float)
         self._value = value
+
+class RestsourceValueDate(RestsourceValue):
+    def __init__(self, value):
+        assert isinstance(value, date)
+        self._value = value
+
+class RestsourceValueDatetime(RestsourceValue):
+    def __init__(self, value):
+        assert isinstance(value, datetime)
+        self._value = value
+
+
 
 
 class RestsourceValueObject(RestsourceValue):
