@@ -3,6 +3,7 @@
 import re
 
 from django.http import HttpResponse, Http404
+from django.db.models import ObjectDoesNotExist
 
 from .restponders import RestponderSet
 from .restponse import Restponse
@@ -12,6 +13,11 @@ __all__ = 'Handler',
 
 
 _RE_MIMETYPE = re.compile(r'[-+*\w]+/[-+*\w]+')
+
+
+class RestsourceDoesNotExist(Exception):
+    pass
+
 
 class Handler(object):
     def __init__(self, restsource, restponders, single=False, restponder_param='format', fallback_restponder=None):
@@ -70,7 +76,11 @@ class Handler(object):
                 response.status_code = 200
             return response
 
-        restponse = meth(request, **kwargs)
+        try:
+            restponse = meth(request, **kwargs)
+        except (ObjectDoesNotExist, RestsourceDoesNotExist):
+            raise Http404(u"No %s found matching the query" % self.restsource.name)
+
         assert isinstance(restponse, Restponse)
 
         response = HttpResponse()
