@@ -29,20 +29,26 @@ class JSONRestponder(Restponder):
     extension = 'json'
     mimetype = 'application/json'
 
-    def __init__(self, indent=None, encoding='utf8'):
-        self.indent = indent
-        self.encoding = encoding
+    def __init__(self, compact=None, encoding='utf8'):
+        self._json_dump_kwargs = { 'encoding': encoding, 'cls': _JSONEncoder }
+        if compact:
+            self._json_dump_kwargs['indent'] = None
+            self._json_dump_kwargs['separators'] = ',', ':'
+        else:
+            self._json_dump_kwargs['indent'] = 1
 
     def write_body(self, restponse, response):
         data = self._format_restponse(restponse)
-        json.dump(data, response, indent=self.indent, encoding=self.encoding, cls=_JSONEncoder)
+        self._json_dump(data, response)
         return response
+
+    def _json_dump(self, obj, fp):
+        return json.dump(obj, fp, **self._json_dump_kwargs)
 
     def _format_restponse(self, restponse):
         out = {
             "status": restponse.status,
-            "payload": self.format_restsourcevalue(restponse.payload)
-        }
+            "payload": self.format_restsourcevalue(restponse.payload) }
         if restponse.message:
             out["message"] = restponse.message
         return out
