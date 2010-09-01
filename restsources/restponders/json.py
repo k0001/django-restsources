@@ -11,7 +11,7 @@ except ImportError:
 from ..restsource_value import (RestsourceValueUnicode, RestsourceValueBytes,
                                 RestsourceValueInteger, RestsourceValueFloat,
                                 RestsourceValueObject, RestsourceValueObjectCollection)
-from . import Restponder, registry
+from . import Restponder
 
 __all__ = 'JSONRestponder',
 
@@ -19,7 +19,6 @@ __all__ = 'JSONRestponder',
 class JSONRestponder(Restponder):
     extension = 'json'
     mimetype = 'application/json'
-    mimetype = 'text/plain'
 
     def __init__(self, indent=None, encoding='utf8'):
         self.indent = indent
@@ -53,6 +52,4 @@ class JSONRestponder(Restponder):
             return { rv.value['name']: [cls.format_restsourcevalue(x) for x in rv.value['collection']] }
         raise TypeError(type(rv))
 
-
-registry.register(JSONRestponder())
 

@@ -70,6 +70,7 @@ class Restsource(object):
 
 
     ### HTTP requests handling
+
     def GET(self, request, **kwargs):
         out = self.filter(**kwargs)
         return Restponse(payload=self.dump_collection(out))
@@ -107,4 +108,10 @@ class Restsource(object):
             options.append('DELETE')
         return tuple(allow)
 
+
+    # Utils
+
+    def handler(self, **kwargs):
+        from .handler import Handler
+        return Handler(self, **kwargs)
 

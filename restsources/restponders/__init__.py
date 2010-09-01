@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-__all__ = 'Restponder', 'registry'
+__all__ = 'Restponder', 'RestponderSet'
 
 
 class Restponder(object):
@@ -26,45 +26,43 @@ class Restponder(object):
         raise NotImplementedError
 
 
-class RestponderRegistry(object):
-    def __init__(self):
-        self._registry = []
+class RestponderSet(object):
+    def __init__(self, restponders):
+        self._set = set()
+        for x in restponders:
+            self.add(x)
 
-    def register(self, restponder):
+    def __iter__(self):
+        return iter(self._set)
+
+    def add(self, restponder):
         assert isinstance(restponder, Restponder)
-        if restponder in self._registry:
-            raise ValueError(u"%s already registered." % repr(restponder))
-        self._registry.append(restponder)
+        self._set.add(restponder)
 
-    def unregister(self, restponder):
+    def remove(self, restponder):
         if isinstance(restponder, Restponder):
-            self._registry.remove(restponder)
+            self._set.remove(restponder)
+
         elif isinstance(restponder, basestring):
             if '/' in restponder:
-                self._registry.remove(self.get_by_mimetype(restponder))
+                self._set.remove(self.get_by_mimetype(restponder))
             else:
-                self._registry.remove(self.get_by_extension(restponder))
+                self._set.remove(self.get_by_extension(restponder))
         else:
             raise KeyError(restponder)
 
     def clear(self):
-        self._registry[:] = []
-
-    def get_default(self):
-        if self._registry:
-            return self._registry[0]
+        self._set.clear()
 
     def get_by_extension(self, extension):
-        for x in self._registry:
+        for x in self._set:
             if x.extension == extension:
                 return x
         raise KeyError(extension)
 
     def get_by_mimetype(self, mimetype):
-        for x in self._registry:
+        for x in self._set:
             if x.mimetype == mimetype:
                 return x
         raise KeyError(mimetype)
 
-
-registry = RestponderRegistry()

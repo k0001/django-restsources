@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from ..restsource_value import (RestsourceValueUnicode, RestsourceValueBytes,
                                 RestsourceValueInteger, RestsourceValueFloat,
                                 RestsourceValueObject, RestsourceValueObjectCollection)
-from . import Restponder, registry
+from . import Restponder
 
 __all__ = 'XMLRestponder',
 
@@ -76,6 +76,4 @@ class XMLRestponder(Restponder):
             return el
         raise TypeError(type(rv))
 
-
-registry.register(XMLRestponder())
 

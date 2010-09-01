@@ -1,12 +1,12 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf8 -*-,
 
 import re
 
 from django.http import HttpResponse, Http404
 
+from .restponders import RestponderSet
 from .restponse import Restponse
 from .restsource import Restsource
-from .restponders import registry as restponders_registry
 
 __all__ = 'Handler',
 
@@ -14,18 +14,23 @@ __all__ = 'Handler',
 _RE_MIMETYPE = re.compile(r'[-+*\w]+/[-+*\w]+')
 
 class Handler(object):
-    def __init__(self, restsource, single=False, restponder_param=None):
+    def __init__(self, restsource, restponders, single=False, restponder_param='format', fallback_restponder=None):
         if not isinstance(restsource, Restsource):
             raise TypeError(type(restsource))
         self.restsource = restsource
         self.single = single
         self.restponder_param = restponder_param
+        self._restponders = RestponderSet(restponders)
+        if fallback_restponder:
+            self._fallback_restponder = self._restponders.get_by_extension(fallback_restponder)
+        else:
+            self._fallback_restponder = iter(self._restponders).next() # just pick any
 
     def select_restponder(self, request, extension=None):
         if extension:
             # The user explicitly requested a representation format, so it's ok to 404 if not available
             try:
-                return restponders_registry.get_by_extension(extension)
+                return self._restponders.get_by_extension(extension)
             except KeyError:
                 raise Http404(u"Invalid representation requested: %s" % extension)
 
@@ -34,7 +39,7 @@ class Handler(object):
             # TODO We are ignoring '*' and 'q' [RFC 2616 Section 14.1]
             for mimetype in _RE_MIMETYPE.findall(request.META['HTTP_ACCEPT']):
                 try:
-                    return restponders_registry.get_by_mimetype(mimetype)
+                    return self._restponders.get_by_mimetype(mimetype)
                 except KeyError:
                     continue
             else:
@@ -43,20 +48,14 @@ class Handler(object):
 
         # From [RFC 2616 Section 14.1]:
         # If no Accept header field is present, then it is assumed that the client accepts all media types.
-        restponder = restponders_registry.get_default()
-        if restponder:
-            return restponder
-        # You probably forgot to register at least one Restponder
-        raise Http404(u"No valid representations available")
+        return self._fallback_restponder
 
     def __call__(self, request, **kwargs):
-        if self.restponder_param:
-            restponder_extension = kwargs.pop(self.restponder_param, None)
-        else:
-            restponder_extension = None
+        restponder_extension = kwargs.pop(self.restponder_param, request.REQUEST.get(self.restponder_param))
         restponder = self.select_restponder(request, restponder_extension)
         if not restponder:
-            return HttpResponse(u"Invalid representation requested",
+            options = u"\n".join(u" - %s: %s" % (x.extension, x.mimetype) for x in self._restponders)
+            return HttpResponse(u"Can't satisfy requested media type. Valid options:\n%s" % options,
                                 status=400, mimetype='text/plain')
 
         meth_name = request.method
