@@ -33,6 +33,12 @@ class PythonRestponder(Restponder):
             "payload": self.format_restsourcevalue(restponse.payload) }
         if restponse.info:
             out["info"] = restponse.info
+        if restponse.links:
+            out["links"] = []
+            for href, attrs in restponse.links:
+                d = { 'href': href }
+                d.update(attrs)
+                out['links'].append({'link': d})
         return out
 
     @classmethod

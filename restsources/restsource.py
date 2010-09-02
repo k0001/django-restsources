@@ -46,10 +46,6 @@ class Restsource(object):
         except TypeError:
             raise ResourceDoesNotExist()
 
-    def get_page(self, objs, per_page, page_num):
-        paginator = Paginator(objs, per_page, allow_empty_first_page=True)
-        return paginator.page(page_num)
-
 
     ### Field values
 
@@ -114,9 +110,32 @@ class Restsource(object):
 
     # Utils
     def _get_paginated_restponse(self, objs, options, request, params):
+        assert request.method == 'GET', u"Paginating %s request not supported." % request.method
+        page_qparam = options['page_qparam']
         try:
-            page_num = int(params.get(options['page_qparam'], request.REQUEST.get(options['page_qparam'], 1)))
-            page = self.get_page(objs, options['paginate_by'], page_num)
+            page_num = int(params.get(page_qparam, request.REQUEST.get(page_qparam, 1)))
+            paginator = Paginator(objs, options['paginate_by'], allow_empty_first_page=True)
+            page = paginator.page(page_num)
         except (ValueError, InvalidPage):
             return Restponse(status=RESTPONSE_STATUS.ERROR_BAD_REQUEST, info=u"Invalid page.", http_status=400)
-        return Restponse(payload=self.dump_collection(page.object_list))
+        restponse = Restponse(payload=self.dump_collection(page.object_list))
+
+
+        ## Link headers
+        qd = request.GET.copy()
+        # rel first
+        qd[page_qparam] = 1
+        restponse.links.append(('%s?%s' % (request.path, qd.urlencode()), {'rel': 'first'}))
+        # rel last
+        qd[page_qparam] = paginator.num_pages
+        restponse.links.append(('%s?%s' % (request.path, qd.urlencode()), {'rel': 'last'}))
+        # rel previous
+        if page.has_previous():
+            qd[page_qparam] = page_num - 1
+            restponse.links.append(('%s?%s' % (request.path, qd.urlencode()), {'rel': 'previous'}))
+        # rel next
+        if page.has_next():
+            qd[page_qparam] = page_num + 1
+            restponse.links.append(('%s?%s' % (request.path, qd.urlencode()), {'rel': 'next'}))
+
+        return restponse

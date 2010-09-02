@@ -19,16 +19,14 @@ class RESTPONSE_STATUS(object):
 
 
 class Restponse(object):
-
     def __init__(self, status=RESTPONSE_STATUS.OK, payload=None,
-                 info=None, http_status=200, http_headers=()):
+                 info=None, http_status=200, http_headers=None, links=None):
         self.status = status
         self.payload = payload
         self.info = info
         self.http_status = http_status
-        self.http_headers = set()
-        for k,v in http_headers:
-            self.http_headers.add((k, v))
+        self.http_headers = http_headers or {}
+        self.links = links or []
 
     def _set_payload(self, value):
         if not isinstance(value, (RestsourceValueObject, RestsourceValueObjectCollection)) and value is not None:

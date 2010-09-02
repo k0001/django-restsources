@@ -28,6 +28,13 @@ class XMLRestponder(Restponder):
         if restponse.info:
             root.set(u"info", restponse.info)
         root.insert(0, self._format_payload(restponse.payload))
+        if restponse.links:
+            links = ET.Element(u"links")
+            for i,(href,attrs) in enumerate(restponse.links):
+                d = { 'href': href }
+                d.update(attrs)
+                links.insert(i, ET.Element(u"link", d))
+            root.insert(0, links)
         return root
 
     def _format_payload(self, payload):
