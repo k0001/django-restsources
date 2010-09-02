@@ -4,7 +4,7 @@ __all__ = 'Restponder', 'RestponderSet'
 
 
 class Restponder(object):
-    extension = 'SET THIS TO THE PREFERED FILE EXTENSION'
+    name = 'SET THIS TO THE PREFERED FILE NAME'
     mimetype = 'SET THIS TO THE PREFERED MIMETYPE'
     encoding = 'utf8'
 
@@ -16,7 +16,7 @@ class Restponder(object):
         return '%s; charset=%s' % (self.mimetype, self.encoding)
 
     def write_headers(self, restponse, response):
-        response.status = restponse.http_status
+        response.status_code = restponse.http_status
         response['Content-Type'] = self.content_type
         for k,v in restponse.http_headers:
             response[k] = v
@@ -50,18 +50,18 @@ class RestponderSet(object):
             if '/' in restponder:
                 self._set.remove(self.get_by_mimetype(restponder))
             else:
-                self._set.remove(self.get_by_extension(restponder))
+                self._set.remove(self.get_by_name(restponder))
         else:
             raise KeyError(restponder)
 
     def clear(self):
         self._set.clear()
 
-    def get_by_extension(self, extension):
+    def get_by_name(self, name):
         for x in self._set:
-            if x.extension == extension:
+            if x.name == name:
                 return x
-        raise KeyError(extension)
+        raise KeyError(name)
 
     def get_by_mimetype(self, mimetype):
         for x in self._set:

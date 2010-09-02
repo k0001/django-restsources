@@ -18,7 +18,7 @@ __all__ = 'JSONRestponder',
 
 
 class JSONRestponder(PythonRestponder):
-    extension = 'json'
+    name = 'json'
     mimetype = 'application/json'
 
     def write_body(self, restponse, response):

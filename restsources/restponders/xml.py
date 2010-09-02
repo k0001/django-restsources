@@ -14,7 +14,7 @@ __all__ = 'XMLRestponder',
 
 
 class XMLRestponder(Restponder):
-    extension = 'xml'
+    name = 'xml'
     mimetype = 'application/xml'
 
     def write_body(self, restponse, response):
@@ -24,15 +24,15 @@ class XMLRestponder(Restponder):
         return response
 
     def _format_restponse(self, restponse):
-        root = ET.Element(u"resource", { u"status": unicode(restponse.status) })
-        if restponse.message:
-            root.set(u"message", restponse.message)
+        root = ET.Element(u"resource", { u"status": restponse.status })
         root.insert(0, self._format_payload(restponse.payload))
         return root
 
     def _format_payload(self, payload):
         el = ET.Element(u"payload")
-        el.insert(0, self.format_restsourcevalue(payload))
+        p = self.format_restsourcevalue(payload)
+        if p:
+            el.insert(0, p)
         return el
 
     @classmethod
@@ -55,6 +55,8 @@ class XMLRestponder(Restponder):
 
     @classmethod
     def format_restsourcevalue(cls, rv):
+        if rv is None:
+            return None
         if isinstance(rv, RestsourceValueObject):
             el = ET.Element(rv.value['name'])
             attributes, data = rv.value['attributes'], dict((k.value, v) for (k,v) in rv.value['data'].items())

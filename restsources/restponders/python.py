@@ -19,7 +19,7 @@ __all__ = 'PythonRestponder',
 
 
 class PythonRestponder(Restponder):
-    extension = 'py'
+    name = 'py'
     mimetype = 'application/x-python'
 
     def write_body(self, restponse, response):
@@ -31,8 +31,6 @@ class PythonRestponder(Restponder):
         out = {
             "status": restponse.status,
             "payload": self.format_restsourcevalue(restponse.payload) }
-        if restponse.message:
-            out["message"] = restponse.message
         return out
 
     @classmethod
@@ -53,7 +51,7 @@ class PythonRestponder(Restponder):
 
 
 class PythonPickleRestponder(PythonRestponder):
-    extension = 'py_pickle'
+    name = 'py_pickle'
     mimetype = 'application/octet-stream'
 
     def __init__(self, protocol=2, *args, **kwargs):

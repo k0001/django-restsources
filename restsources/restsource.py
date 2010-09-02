@@ -1,17 +1,21 @@
 # -*- coding: utf8 -*-
 
+from django.db.models.query import QuerySet
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+
 from .restponse import Restponse
 from .restsource_value import RestsourceValue, RestsourceValueObject, RestsourceValueObjectCollection
+from restsources.exceptions import ResourceDoesNotExist, MultipleResourcesExist
 
 __all__ = 'Restsource',
 
 
 class Restsource(object):
+    methods = 'GET',
     model = None
-    attributes = ()
     fields = ()
-    excluded = ('pk',)
-
+    excluded = 'pk',
+    attributes = ()
 
     ### Querying
 
@@ -20,13 +24,27 @@ class Restsource(object):
             return self.model.objects.all()
 
     def filter(self, **kwargs):
+        """Returns a iterable of matching resource objects"""
         qs = self.queryset()
         if not qs:
-            raise NotImplementedError
+            raise NotImplementedError()
         return qs.filter(**kwargs)
 
     def get(self, **kwargs):
-        return self.filter(**kwargs).get()
+        """Returns a single resource object"""
+        l = self.filter(**kwargs)
+        if isinstance(l, QuerySet):
+            try:
+                return l.get()
+            except ObjectDoesNotExist:
+                raise ResourceDoesNotExist()
+        try:
+            if len(l) > 1:
+                raise MultipleResourcesExist()
+            return iter(l).next()
+        except TypeError:
+            raise ResourceDoesNotExist()
+
 
 
     ### Field values
@@ -72,47 +90,17 @@ class Restsource(object):
 
     ### HTTP requests handling
 
-    def GET(self, request, **kwargs):
-        out = self.filter(**kwargs)
-        return Restponse(payload=self.dump_collection(out))
+    def GET(self, options, request, params):
+        if options['single']:
+            return Restponse(payload=self.dump_single(self.get(**params)))
+        return Restponse(payload=self.dump_collection(self.filter(**params)))
 
-    def GET_single(self, request, **kwargs):
-        out = self.get(**kwargs)
-        return Restponse(payload=self.dump_single(out))
-
-    def POST(self, request, **kwargs):
+    def POST(self, options, request, params):
         raise NotImplementedError
 
-    def PUT(self, request, **kwargs):
+    def PUT(self, options, request, params):
         raise NotImplementedError
 
-    def DELETE(self, request, **kwargs):
+    def DELETE(self, options, request, params):
         raise NotImplementedError
-
-    # These values are used by the ``allowed_methods`` property
-    POST.disabled = True
-    PUT.disabled = True
-    DELETE.disabled = True
-
-    @property
-    def allowed_methods(self):
-        """Return the HTTP methods allowed for this resource"""
-        allow = []
-        if getattr(self.GET, 'disabled', False) or getattr(self.GET_single, 'disabled', False):
-            options.append('GET')
-            options.append('HEAD')
-        if getattr(self.POST, 'disabled', False):
-            options.append('POST')
-        if getattr(self.PUT, 'disabled', False):
-            options.append('PUT')
-        if getattr(self.DELETE, 'disabled', False):
-            options.append('DELETE')
-        return tuple(allow)
-
-
-    # Utils
-
-    def handler(self, **kwargs):
-        from .handler import Handler
-        return Handler(self, **kwargs)
 
