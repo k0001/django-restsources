@@ -2,8 +2,9 @@
 
 from django.db.models.query import QuerySet
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.paginator import Paginator, InvalidPage
 
-from .restponse import Restponse
+from .restponse import Restponse, RESTPONSE_STATUS
 from .restsource_value import RestsourceValue, RestsourceValueObject, RestsourceValueObjectCollection
 from restsources.exceptions import ResourceDoesNotExist, MultipleResourcesExist
 
@@ -45,6 +46,9 @@ class Restsource(object):
         except TypeError:
             raise ResourceDoesNotExist()
 
+    def get_page(self, objs, per_page, page_num):
+        paginator = Paginator(objs, per_page, allow_empty_first_page=True)
+        return paginator.page(page_num)
 
 
     ### Field values
@@ -93,7 +97,10 @@ class Restsource(object):
     def GET(self, options, request, params):
         if options['single']:
             return Restponse(payload=self.dump_single(self.get(**params)))
-        return Restponse(payload=self.dump_collection(self.filter(**params)))
+        objs = self.filter(**params)
+        if options['paginate_by']:
+            return self._get_paginated_restponse(objs, options, request, params)
+        return Restponse(payload=self.dump_collection(objs))
 
     def POST(self, options, request, params):
         raise NotImplementedError
@@ -104,3 +111,12 @@ class Restsource(object):
     def DELETE(self, options, request, params):
         raise NotImplementedError
 
+
+    # Utils
+    def _get_paginated_restponse(self, objs, options, request, params):
+        try:
+            page_num = int(params.get(options['page_param'], request.REQUEST.get(options['page_param'], 1)))
+            page = self.get_page(objs, options['paginate_by'], page_num)
+        except (ValueError, InvalidPage):
+            return Restponse(status=RESTPONSE_STATUS.ERROR_BAD_REQUEST, info=u"Invalid page.", http_status=400)
+        return Restponse(payload=self.dump_collection(page.object_list))

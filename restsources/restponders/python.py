@@ -31,6 +31,8 @@ class PythonRestponder(Restponder):
         out = {
             "status": restponse.status,
             "payload": self.format_restsourcevalue(restponse.payload) }
+        if restponse.info:
+            out["info"] = restponse.info
         return out
 
     @classmethod

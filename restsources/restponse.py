@@ -12,6 +12,7 @@ class RESTPONSE_STATUS(object):
     ERROR_NOT_FOUND = "ERROR_NOT_FOUND"
     ERROR_DUPLICATES = "ERROR_DUPLICATES"
     ERROR_CONFLICT = "ERROR_CONFLICT"
+    ERROR_BAD_REQUEST = "ERROR_BAD_REQUEST"
 
     # server errors
     ERROR_INTERNAL = "ERROR_INTERNAL"
@@ -19,22 +20,15 @@ class RESTPONSE_STATUS(object):
 
 class Restponse(object):
 
-    def __init__(self, status=RESTPONSE_STATUS.OK, payload=None, http_status=200, http_headers=()):
-        self._status, self._payload, self._http_headers = None, None, set()
-
+    def __init__(self, status=RESTPONSE_STATUS.OK, payload=None,
+                 info=None, http_status=200, http_headers=()):
         self.status = status
         self.payload = payload
+        self.info = info
         self.http_status = http_status
+        self.http_headers = set()
         for k,v in http_headers:
             self.http_headers.add((k, v))
-
-    http_headers = property(lambda self: self._http_headers)
-
-    def _set_status(self, value):
-        assert isinstance(value, str)
-        self._status = value
-
-    status = property(lambda self: self._status, _set_status)
 
     def _set_payload(self, value):
         if not isinstance(value, (RestsourceValueObject, RestsourceValueObjectCollection)) and value is not None:

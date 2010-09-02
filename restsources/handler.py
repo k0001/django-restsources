@@ -34,10 +34,19 @@ class Handler(object):
         #
         # restponder_name_param: (default 'format')
         #   param name for restponder selection
+        #
+        # paginate_by: (default None)
+        #   if different than None, then paginate the results.
+        #
+        # page_param: (default 'page')
+        #   param name for page number selection if pagination is enabled (see paginate_by).
 
         self._options = {
             'single': False,
-            'restponder_name_param': 'format' }
+            'restponder_name_param': 'format',
+            'paginate_by': None,
+            'page_param': 'page'
+        }
         if options:
             self._options.update(options)
         self._options_param = options_param

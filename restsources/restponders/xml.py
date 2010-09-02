@@ -25,6 +25,8 @@ class XMLRestponder(Restponder):
 
     def _format_restponse(self, restponse):
         root = ET.Element(u"resource", { u"status": restponse.status })
+        if restponse.info:
+            root.set(u"info", restponse.info)
         root.insert(0, self._format_payload(restponse.payload))
         return root
 
