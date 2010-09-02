@@ -30,22 +30,26 @@ class Handler(object):
         #   Restsource instance
         #
         # single: (default False)
-        #   wether to return a single result object, or a collection of them.
+        #   Whether to return a single result object, or a collection of them.
         #
-        # restponder_name_param: (default 'format')
-        #   param name for restponder selection
+        # restponder_name_qparam: (default 'format')
+        #   Querystring parameter name for restponder selection
+        #
+        # restponder_name_uparam: (default None)
+        #   URL parameter name for restponder selection. If specified, overrides restponder_name_qparam
         #
         # paginate_by: (default None)
-        #   if different than None, then paginate the results.
+        #   If different than None, then paginate the results.
         #
-        # page_param: (default 'page')
-        #   param name for page number selection if pagination is enabled (see paginate_by).
+        # page_qparam: (default 'page')
+        #   Querystring parameter name for page number selection if pagination is enabled (see paginate_by).
 
         self._options = {
             'single': False,
-            'restponder_name_param': 'format',
+            'restponder_name_uparam': None,
+            'restponder_name_qparam': 'format',
             'paginate_by': None,
-            'page_param': 'page'
+            'page_qparam': 'page'
         }
         if options:
             self._options.update(options)
@@ -98,8 +102,10 @@ class Handler(object):
         return response
 
     def select_restponder(self, options, request, params):
-        name = params.pop(options['restponder_name_param'],
-                               request.REQUEST.get(options['restponder_name_param']))
+        if options["restponder_name_uparam"]:
+            name = params.pop(options["restponder_name_uparam"])
+        else:
+            name = request.REQUEST.get(options["restponder_name_qparam"])
 
         if name:
             # The user explicitly requested a representation format, so it's ok to 404 if not available

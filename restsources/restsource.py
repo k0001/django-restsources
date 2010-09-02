@@ -115,7 +115,7 @@ class Restsource(object):
     # Utils
     def _get_paginated_restponse(self, objs, options, request, params):
         try:
-            page_num = int(params.get(options['page_param'], request.REQUEST.get(options['page_param'], 1)))
+            page_num = int(params.get(options['page_qparam'], request.REQUEST.get(options['page_qparam'], 1)))
             page = self.get_page(objs, options['paginate_by'], page_num)
         except (ValueError, InvalidPage):
             return Restponse(status=RESTPONSE_STATUS.ERROR_BAD_REQUEST, info=u"Invalid page.", http_status=400)
