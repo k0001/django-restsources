@@ -68,7 +68,7 @@ class XMLRestponder(Restponder):
             return None
         if isinstance(rv, RestsourceValueObject):
             el = ET.Element(rv.value['name'])
-            attributes, data = rv.value['attributes'], dict((k.value, v) for (k,v) in rv.value['data'].items())
+            attributes, data = rv.value['primary_fields'], dict((k.value, v) for (k,v) in rv.value['data'].items())
             for attr in attributes:
                 el.set(attr, cls._format_simple_restsourcevalue_as_text(data[attr]))
             for i,(k,rv) in enumerate(((x,y) for (x,y) in data.items() if not x in attributes)):

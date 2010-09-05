@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-
+from django.db import models
 from django.db.models.query import QuerySet
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.core.paginator import Paginator, InvalidPage
@@ -16,24 +16,35 @@ class Restsource(object):
     model = None
     fields = ()
     excluded = 'pk',
-    attributes = ()
+    primary_fields = ()
+    # relations = None
+
+    def __init__(self, primary_fields_only=False, excluded=()):
+        self.excluded = tuple(set(tuple(self.excluded) + tuple(excluded)))
+        self._primary_fields_only = primary_fields_only
+
 
     ### Querying
 
     def queryset(self):
+        """
+        Default query set for this Resource.
+
+        Note that this isn't restricted to return a Django QuerySet. You could return
+        whatever works for you as a "query set", just make sure you make good
+        use of it in methods ``filter`` and ``get``.
+        """
         if self.model:
             return self.model.objects.all()
+        raise NotImplementedError
 
-    def filter(self, **kwargs):
+    def filter(self, queryset, **kwargs):
         """Returns a iterable of matching resource objects"""
-        qs = self.queryset()
-        if not qs:
-            raise NotImplementedError()
-        return qs.filter(**kwargs)
+        return queryset.filter(**kwargs)
 
-    def get(self, **kwargs):
+    def get(self, queryset, **kwargs):
         """Returns a single resource object"""
-        l = self.filter(**kwargs)
+        l = self.filter(queryset, **kwargs)
         if isinstance(l, QuerySet):
             try:
                 return l.get()
@@ -50,10 +61,10 @@ class Restsource(object):
     ### Field values
 
     def _get_field_value(self, obj, field_name):
-        try:
+        if hasattr(self, 'get_%s' % field_name):
             meth = getattr(self, 'get_%s' % field_name)
             value = meth(obj)
-        except AttributeError:
+        else:
             value = getattr(obj, field_name)
         return value
 
@@ -63,25 +74,53 @@ class Restsource(object):
             value = RestsourceValue.get_for_value(value)
         return value
 
-    def _get_fields_values(self, obj):
+    def _get_fields_values(self, obj, primary_fields_only=False):
+        field_names = set(self.primary_fields)
+        if not primary_fields_only:
+            field_names.update(self.fields)
+        field_names.difference_update(self.excluded)
         values = {}
-        for field_name in set(self.attributes + self.fields) - set(self.excluded):
+        for field_name in field_names:
             values[field_name] = self._get_field_value(obj, field_name)
         return values
 
-    def _get_fields_restsourcevalues(self, obj):
+    def _get_fields_restsourcevalues(self, obj, primary_fields_only=False):
+        if isinstance(obj, models.Model):
+            return self._get_fields_restsourcevalues_for_model(obj, primary_fields_only)
         restsourcevalues = {}
-        for k,v in self._get_fields_values(obj).items():
+        for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
             restsourcevalues[RestsourceValue.get_for_value(k)] = RestsourceValueObject.get_for_value(v)
+        return restsourcevalues
+
+    def _get_fields_restsourcevalues_for_model(self, obj, primary_fields_only=False):
+        restsourcevalues = {}
+        for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
+            try:
+                rv = RestsourceValueObject.get_for_value(v)
+            except TypeError:
+                # Try to handle relationships
+                field, model, direct, m2m = obj._meta.get_field_by_name(k)
+                if isinstance(field, models.ForeignKey):
+                    if not k in self.relations:
+                        raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
+                    rv = self.relations[k].dump_single(v)
+                elif isinstance(field, models.ManyToManyField) or \
+                            k in (x.get_accessor_name() for x in obj._meta.get_all_related_many_to_many_objects()):
+                    if not k in self.relations:
+                        raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
+                    rv = self.relations[k].dump_collection(v.all())
+                else:
+                    raise
+            restsourcevalues[RestsourceValue.get_for_value(k)] = rv
         return restsourcevalues
 
 
     ### Dumping Restsources
 
     def dump_single(self, obj):
-        data = self._get_fields_restsourcevalues(obj)
-        return RestsourceValueObject(self.name, data, self.attributes)
-
+        data = self._get_fields_restsourcevalues(obj, self._primary_fields_only)
+        used_primary_fields = set(self.primary_fields) - set(self.excluded)
+        return RestsourceValueObject(self.name, data, used_primary_fields)
 
     def dump_collection(self, objs):
         data = [self.dump_single(x) for x in objs]
@@ -92,8 +131,8 @@ class Restsource(object):
 
     def GET(self, options, request, params):
         if options['single']:
-            return Restponse(payload=self.dump_single(self.get(**params)))
-        objs = self.filter(**params)
+            return Restponse(payload=self.dump_single(self.get(self.queryset(), **params)))
+        objs = self.filter(self.queryset(), **params)
         if options['paginate_by']:
             return self._get_paginated_restponse(objs, options, request, params)
         return Restponse(payload=self.dump_collection(objs))

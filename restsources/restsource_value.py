@@ -64,16 +64,17 @@ class RestsourceValueDatetime(RestsourceValue):
 
 
 class RestsourceValueObject(RestsourceValue):
-    def __init__(self, name, data, attributes=()):
+    def __init__(self, name, data, primary_fields=()):
         assert isinstance(name, (unicode, str))
         assert isinstance(data, dict)
         assert all(isinstance(k, RestsourceValue) and isinstance(v, RestsourceValue) for (k,v) in data.items())
-        assert isinstance(attributes, (list, tuple, set))
-        assert all(isinstance(x, (unicode, str)) for x in attributes)
+        assert isinstance(primary_fields, (list, tuple, set))
+        assert all(isinstance(x, (unicode, str)) for x in primary_fields)
+        assert all(x in (y.value for y in data) for x in primary_fields)
         self._value = {
             'name': name,
             'data': data,
-            'attributes': tuple(attributes) }
+            'primary_fields': tuple(primary_fields) }
 
 class RestsourceValueObjectCollection(RestsourceValue):
     def __init__(self, name, collection):
