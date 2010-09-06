@@ -67,7 +67,7 @@ class RestsourceValueObject(RestsourceValue):
     def __init__(self, name, data, primary_fields=()):
         assert isinstance(name, (unicode, str))
         assert isinstance(data, dict)
-        assert all(isinstance(k, RestsourceValue) and isinstance(v, RestsourceValue) for (k,v) in data.items())
+        assert all(isinstance(k, RestsourceValue) and (isinstance(v, RestsourceValue) or v is None) for (k,v) in data.items())
         assert isinstance(primary_fields, (list, tuple, set))
         assert all(isinstance(x, (unicode, str)) for x in primary_fields)
         assert all(x in (y.value for y in data) for x in primary_fields)

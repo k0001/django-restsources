@@ -72,6 +72,8 @@ class XMLRestponder(Restponder):
             for attr in attributes:
                 el.set(attr, cls._format_simple_restsourcevalue_as_text(data[attr]))
             for i,(k,rv) in enumerate(((x,y) for (x,y) in data.items() if not x in attributes)):
+                if rv is None:
+                    continue
                 if isinstance(rv, (RestsourceValueUnicode, RestsourceValueBytes,
                                    RestsourceValueInteger, RestsourceValueFloat,
                                    RestsourceValueDate, RestsourceValueDatetime)):
