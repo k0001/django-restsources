@@ -1,4 +1,6 @@
 # -*- coding: utf8 -*-
+import types
+
 from django.db import models
 from django.db.models.query import QuerySet
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -17,7 +19,8 @@ class Restsource(object):
     fields = ()
     excluded = 'pk',
     primary_fields = ()
-    # relations = None
+    relations = None
+
 
     def __init__(self, primary_fields_only=False, excluded=()):
         self.excluded = tuple(set(tuple(self.excluded) + tuple(excluded)))
@@ -97,29 +100,36 @@ class Restsource(object):
         for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
             if v is None:
                 rv = None
+            elif isinstance(v, models.Manager):
+                # Reverse FK or Reverse M2M
+                rv = RestsourceValueObjectCollection(k, [self._rel(k).dump_single(x) for x in v.all()])
             else:
                 try:
                     rv = RestsourceValueObject.get_for_value(v)
                 except TypeError:
-                    # Try to handle relationships
                     field, model, direct, m2m = obj._meta.get_field_by_name(k)
                     if isinstance(field, models.ForeignKey):
-                        if not k in self.relations:
-                            raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
-                        if v is None:
-                            rv = None
-                        else:
-                            rv = self.relations[k].dump_single(v)
-                    elif isinstance(field, models.ManyToManyField) or \
-                                k in (x.get_accessor_name() for x in obj._meta.get_all_related_many_to_many_objects()):
-                        if not k in self.relations:
-                            raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
-                        rv = self.relations[k].dump_collection(v.all())
+                        # Foreign Key
+                        rv = self._rel(k).dump_single(v)
                     else:
                         raise
             restsourcevalues[RestsourceValue.get_for_value(k)] = rv
         return restsourcevalues
 
+
+    def _rel(self, name):
+        """Returns the Restsource asociated with a relationship"""
+        try:
+            return self.relations[name]
+        except KeyError:
+            raise RuntimeError(u"You need to specify a Restource for %s in %s.relations" % (name, self))
+        except TypeError:
+            # we enter here only the first time if self.relations isn't a dict, and we populate it.
+            if isinstance(self.relations, types.MethodType):
+                self.relations = self.relations() # overwrite
+            elif self.relations is None:
+                self.relations = {}
+            return self._rel(name)
 
     ### Dumping Restsources
 
