@@ -95,25 +95,28 @@ class Restsource(object):
     def _get_fields_restsourcevalues_for_model(self, obj, primary_fields_only=False):
         restsourcevalues = {}
         for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
-            try:
-                rv = RestsourceValueObject.get_for_value(v)
-            except TypeError:
-                # Try to handle relationships
-                field, model, direct, m2m = obj._meta.get_field_by_name(k)
-                if isinstance(field, models.ForeignKey):
-                    if not k in self.relations:
-                        raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
-                    if v is None:
-                        rv = None
+            if v is None:
+                rv = None
+            else:
+                try:
+                    rv = RestsourceValueObject.get_for_value(v)
+                except TypeError:
+                    # Try to handle relationships
+                    field, model, direct, m2m = obj._meta.get_field_by_name(k)
+                    if isinstance(field, models.ForeignKey):
+                        if not k in self.relations:
+                            raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
+                        if v is None:
+                            rv = None
+                        else:
+                            rv = self.relations[k].dump_single(v)
+                    elif isinstance(field, models.ManyToManyField) or \
+                                k in (x.get_accessor_name() for x in obj._meta.get_all_related_many_to_many_objects()):
+                        if not k in self.relations:
+                            raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
+                        rv = self.relations[k].dump_collection(v.all())
                     else:
-                        rv = self.relations[k].dump_single(v)
-                elif isinstance(field, models.ManyToManyField) or \
-                            k in (x.get_accessor_name() for x in obj._meta.get_all_related_many_to_many_objects()):
-                    if not k in self.relations:
-                        raise RuntimeError(u"You need to specify a Restource for '%s' in %s.relations" % (k, self))
-                    rv = self.relations[k].dump_collection(v.all())
-                else:
-                    raise
+                        raise
             restsourcevalues[RestsourceValue.get_for_value(k)] = rv
         return restsourcevalues
 
