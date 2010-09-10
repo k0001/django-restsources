@@ -7,16 +7,20 @@ import traceback
 from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.db.models import ObjectDoesNotExist
+from django.views.decorators.csrf import csrf_exempt
 
 from .restponders import RestponderSet
 from .restponse import Restponse, RESTPONSE_STATUS
 from .restsource import Restsource
 from .exceptions import ResourceDoesNotExist, MultipleResourcesExist
+from .utils import load_put_and_files
+
 
 __all__ = 'Handler',
 
 
 _RE_MIMETYPE = re.compile(r'[-+*\w]+/[-+*\w]+')
+_REQUEST_ENTITY_MIMETYPES = 'application/x-www-form-urlencoded', 'multipart/form-data',
 
 
 class Handler(object):
@@ -79,6 +83,18 @@ class Handler(object):
                 response.status_code = 200
             return response
         meth = getattr(restsource, meth_name)
+
+        # Request entity validation
+        if meth_name in ('PUT', 'POST'):
+            for mimetype in _RE_MIMETYPE.findall(request.META['CONTENT_TYPE']):
+                if mimetype in _REQUEST_ENTITY_MIMETYPES:
+                    break
+            else:
+                return HttpResponse(u"Supported media types: %s" % u", ".join(_REQUEST_ENTITY_MIMETYPES),
+                                    status=415, mimetype='text/plain')
+            if meth_name == 'PUT':
+                # Handle PUT entity just like Django does for POST
+                load_put_and_files(request)
 
         # Restponse
         try:

@@ -41,13 +41,13 @@ class Restsource(object):
             return self.model.objects.all()
         raise NotImplementedError
 
-    def filter(self, queryset, **kwargs):
+    def filter(self, queryset, request, **kwargs):
         """Returns a iterable of matching resource objects"""
         return queryset.filter(**kwargs)
 
-    def get(self, queryset, **kwargs):
+    def get(self, queryset, request, **kwargs):
         """Returns a single resource object"""
-        l = self.filter(queryset, **kwargs)
+        l = self.filter(queryset, request, **kwargs)
         if isinstance(l, QuerySet):
             try:
                 return l.get()
@@ -147,8 +147,8 @@ class Restsource(object):
 
     def GET(self, options, request, params):
         if options['single']:
-            return Restponse(payload=self.dump_single(self.get(self.queryset(), **params)))
-        objs = self.filter(self.queryset(), **params)
+            return Restponse(payload=self.dump_single(self.get(self.queryset(), request, **params)))
+        objs = self.filter(self.queryset(), request, **params)
         if options['paginate_by']:
             return self._get_paginated_restponse(objs, options, request, params)
         return Restponse(payload=self.dump_collection(objs))
@@ -194,3 +194,5 @@ class Restsource(object):
             restponse.links.append(('%s?%s' % (request.path, qd.urlencode()), {'rel': 'next'}))
 
         return restponse
+
+
