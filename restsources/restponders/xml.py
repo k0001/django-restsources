@@ -51,7 +51,7 @@ class XMLRestponder(Restponder):
         if isinstance(rv, (RestsourceValueUnicode, RestsourceValueBytes)):
             return rv.value
         elif isinstance(rv, (RestsourceValueInteger, RestsourceValueFloat)):
-            return srt(rv.value)
+            return str(rv.value)
         elif isinstance(rv, (RestsourceValueDate, RestsourceValueDatetime)):
             return rv.value.isoformat()
         raise TypeError(type(rv))
