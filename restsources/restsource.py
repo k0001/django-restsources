@@ -147,11 +147,12 @@ class Restsource(object):
 
     def GET(self, options, request, params):
         if options['single']:
-            return Restponse(payload=self.dump_single(self.get(self.queryset(), request, **params)))
+            return Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
+                             payload=self.dump_single(self.get(self.queryset(), request, **params)))
         objs = self.filter(self.queryset(), request, **params)
         if options['paginate_by']:
             return self._get_paginated_restponse(objs, options, request, params)
-        return Restponse(payload=self.dump_collection(objs))
+        return Restponse(status=RESTPONSE_STATUS.OK, http_status=200, payload=self.dump_collection(objs))
 
     def POST(self, options, request, params):
         raise NotImplementedError
@@ -173,8 +174,8 @@ class Restsource(object):
             page = paginator.page(page_num)
         except (ValueError, InvalidPage):
             return Restponse(status=RESTPONSE_STATUS.ERROR_BAD_REQUEST, info=u"Invalid page.", http_status=400)
-        restponse = Restponse(payload=self.dump_collection(page.object_list))
-
+        restponse = Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
+                              payload=self.dump_collection(page.object_list))
 
         ## Link headers
         qd = request.GET.copy()
