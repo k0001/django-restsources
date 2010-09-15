@@ -30,6 +30,7 @@ class RestsourceValue(object):
         except KeyError:
             raise TypeError(type(value))
 
+
 class RestsourceValueUnicode(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, unicode)
@@ -76,6 +77,14 @@ class RestsourceValueObject(RestsourceValue):
             'data': data,
             'primary_fields': tuple(primary_fields) }
 
+    @classmethod
+    def from_dict(cls, name, dic):
+        rvdata = {}
+        for k,v in dic.iteritems():
+            rvdata[RestsourceValue.get_for_value(k)] = RestsourceValue.get_for_value(v)
+        return cls(name, rvdata)
+
+
 class RestsourceValueObjectCollection(RestsourceValue):
     def __init__(self, name, collection):
         assert isinstance(name, (unicode, str))
@@ -83,5 +92,4 @@ class RestsourceValueObjectCollection(RestsourceValue):
         self._value = {
             'name': name,
             'collection': collection }
-
 
