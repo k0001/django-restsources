@@ -59,6 +59,7 @@ class Handler(object):
             self._options.update(options)
         self._options_param = options_param
 
+    @csrf_exempt
     def __call__(self, request, **kwargs):
         options = self._options.copy()
         options.update(kwargs.pop(self._options_param, {}))
