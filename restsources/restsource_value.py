@@ -2,10 +2,10 @@
 
 from datetime import datetime, date
 
-__all__ = ('RestsourceValue', 'RestsourceValueUnicode', 'RestsourceValueBytes',
-           'RestsourceValueInteger', 'RestsourceValueFloat',
-           'RestsourceValueDate', 'RestsourceValueDatetime',
-           'RestsourceValueObject', 'RestsourceValueObjectCollection')
+__all__ = ('RestsourceValue', 'Unicode', 'Bytes',
+           'Integer', 'Float',
+           'Date', 'Datetime',
+           'Object', 'ObjectCollection')
 
 
 class RestsourceValue(object):
@@ -17,13 +17,13 @@ class RestsourceValue(object):
     @classmethod
     def get_for_value(cls, value):
         simple_types_map = {
-            unicode: RestsourceValueUnicode,
-            str: RestsourceValueBytes,
-            int: RestsourceValueInteger,
-            long: RestsourceValueInteger,
-            float: RestsourceValueFloat,
-            date: RestsourceValueDate,
-            datetime: RestsourceValueDatetime,
+            unicode: Unicode,
+            str: Bytes,
+            int: Integer,
+            long: Integer,
+            float: Float,
+            date: Date,
+            datetime: Datetime,
         }
         try:
             return simple_types_map[type(value)](value)
@@ -31,32 +31,32 @@ class RestsourceValue(object):
             raise TypeError(type(value))
 
 
-class RestsourceValueUnicode(RestsourceValue):
+class Unicode(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, unicode)
         self._value = value
 
-class RestsourceValueBytes(RestsourceValue):
+class Bytes(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, str)
         self._value = value
 
-class RestsourceValueInteger(RestsourceValue):
+class Integer(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, (int, long))
         self._value = value
 
-class RestsourceValueFloat(RestsourceValue):
+class Float(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, float)
         self._value = value
 
-class RestsourceValueDate(RestsourceValue):
+class Date(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, date)
         self._value = value
 
-class RestsourceValueDatetime(RestsourceValue):
+class Datetime(RestsourceValue):
     def __init__(self, value):
         assert isinstance(value, datetime)
         self._value = value
@@ -64,7 +64,7 @@ class RestsourceValueDatetime(RestsourceValue):
 
 
 
-class RestsourceValueObject(RestsourceValue):
+class Object(RestsourceValue):
     def __init__(self, name, data, primary_fields=()):
         assert isinstance(name, (unicode, str))
         assert isinstance(data, dict)
@@ -85,10 +85,10 @@ class RestsourceValueObject(RestsourceValue):
         return cls(name, rvdata)
 
 
-class RestsourceValueObjectCollection(RestsourceValue):
+class ObjectCollection(RestsourceValue):
     def __init__(self, name, collection):
         assert isinstance(name, (unicode, str))
-        assert all(isinstance(x, RestsourceValueObject) for x in collection)
+        assert all(isinstance(x, Object) for x in collection)
         self._value = {
             'name': name,
             'collection': collection }

@@ -6,10 +6,10 @@ from datetime import datetime, date
 
 from .json_util import json
 
-from ..restsource_value import (RestsourceValueUnicode, RestsourceValueBytes,
-                                RestsourceValueInteger, RestsourceValueFloat,
-                                RestsourceValueDate, RestsourceValueDatetime,
-                                RestsourceValueObject, RestsourceValueObjectCollection)
+from ..restsource_value import (Unicode, Bytes,
+                                Integer, Float,
+                                Date, Datetime,
+                                Object, ObjectCollection)
 from . import Restponder
 from .python import PythonRestponder
 

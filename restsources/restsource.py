@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.core.paginator import Paginator, InvalidPage
 
 from .restponse import Restponse, RESTPONSE_STATUS
-from .restsource_value import RestsourceValue, RestsourceValueObject, RestsourceValueObjectCollection
+from .restsource_value import RestsourceValue, Object, ObjectCollection
 from restsources.exceptions import ResourceDoesNotExist, MultipleResourcesExist
 
 __all__ = 'Restsource',
@@ -92,7 +92,7 @@ class Restsource(object):
             return self._get_fields_restsourcevalues_for_model(obj, primary_fields_only)
         restsourcevalues = {}
         for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
-            restsourcevalues[RestsourceValue.get_for_value(k)] = RestsourceValueObject.get_for_value(v)
+            restsourcevalues[RestsourceValue.get_for_value(k)] = Object.get_for_value(v)
         return restsourcevalues
 
     def _get_fields_restsourcevalues_for_model(self, obj, primary_fields_only=False):
@@ -102,10 +102,10 @@ class Restsource(object):
                 rv = None
             elif isinstance(v, models.Manager):
                 # Reverse FK or Reverse M2M
-                rv = RestsourceValueObjectCollection(k, [self._rel(k).dump_single(x) for x in v.all()])
+                rv = ObjectCollection(k, [self._rel(k).dump_single(x) for x in v.all()])
             else:
                 try:
-                    rv = RestsourceValueObject.get_for_value(v)
+                    rv = Object.get_for_value(v)
                 except TypeError:
                     field, model, direct, m2m = obj._meta.get_field_by_name(k)
                     if isinstance(field, models.ForeignKey):
@@ -136,11 +136,11 @@ class Restsource(object):
     def dump_single(self, obj):
         data = self._get_fields_restsourcevalues(obj, self._primary_fields_only)
         used_primary_fields = set(self.primary_fields) - set(self.excluded)
-        return RestsourceValueObject(self.name, data, used_primary_fields)
+        return Object(self.name, data, used_primary_fields)
 
     def dump_collection(self, objs):
         data = [self.dump_single(x) for x in objs]
-        return RestsourceValueObjectCollection(self.name_plural, data)
+        return ObjectCollection(self.name_plural, data)
 
 
     ### HTTP requests handling

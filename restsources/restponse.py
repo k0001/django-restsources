@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-from .restsource_value import RestsourceValueObject, RestsourceValueObjectCollection
+from .restsource_value import Object, ObjectCollection
 from .exceptions import ResourceDoesNotExist, MultipleResourcesExist
 
 __all__ = 'Restponse', 'RESTPONSE_STATUS',
@@ -29,7 +29,7 @@ class Restponse(object):
         self.links = links or []
 
     def _set_payload(self, value):
-        if not isinstance(value, (RestsourceValueObject, RestsourceValueObjectCollection)) and value is not None:
+        if not isinstance(value, (Object, ObjectCollection)) and value is not None:
             raise TypeError(type(value))
         self._payload = value
 

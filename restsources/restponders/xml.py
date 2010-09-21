@@ -4,10 +4,10 @@ from __future__ import absolute_import
 
 import xml.etree.ElementTree as ET
 
-from ..restsource_value import (RestsourceValueUnicode, RestsourceValueBytes,
-                                RestsourceValueInteger, RestsourceValueFloat,
-                                RestsourceValueDate, RestsourceValueDatetime,
-                                RestsourceValueObject, RestsourceValueObjectCollection)
+from ..restsource_value import (Unicode, Bytes,
+                                Integer, Float,
+                                Date, Datetime,
+                                Object, ObjectCollection)
 from . import Restponder
 
 __all__ = 'XMLRestponder',
@@ -48,11 +48,11 @@ class XMLRestponder(Restponder):
     def _format_simple_restsourcevalue_as_text(cls, rv):
         if rv is None:
             return None
-        if isinstance(rv, (RestsourceValueUnicode, RestsourceValueBytes)):
+        if isinstance(rv, (Unicode, Bytes)):
             return rv.value
-        elif isinstance(rv, (RestsourceValueInteger, RestsourceValueFloat)):
+        elif isinstance(rv, (Integer, Float)):
             return str(rv.value)
-        elif isinstance(rv, (RestsourceValueDate, RestsourceValueDatetime)):
+        elif isinstance(rv, (Date, Datetime)):
             return rv.value.isoformat()
         raise TypeError(type(rv))
 
@@ -66,7 +66,7 @@ class XMLRestponder(Restponder):
     def format_restsourcevalue(cls, rv):
         if rv is None:
             return None
-        if isinstance(rv, RestsourceValueObject):
+        if isinstance(rv, Object):
             el = ET.Element(rv.value['name'])
             attributes, data = rv.value['primary_fields'], dict((k.value, v) for (k,v) in rv.value['data'].items())
             for attr in attributes:
@@ -74,16 +74,16 @@ class XMLRestponder(Restponder):
             for i,(k,rv) in enumerate(((x,y) for (x,y) in data.items() if not x in attributes)):
                 if rv is None:
                     continue
-                if isinstance(rv, (RestsourceValueUnicode, RestsourceValueBytes,
-                                   RestsourceValueInteger, RestsourceValueFloat,
-                                   RestsourceValueDate, RestsourceValueDatetime)):
+                if isinstance(rv, (Unicode, Bytes,
+                                   Integer, Float,
+                                   Date, Datetime)):
                     el.insert(i, cls._format_simple_restsourcevalue_as_element(k, rv))
-                elif isinstance(rv, (RestsourceValueObject, RestsourceValueObjectCollection)):
+                elif isinstance(rv, (Object, ObjectCollection)):
                     el.insert(i, cls.format_restsourcevalue(rv))
                 else:
                     raise TypeError(type(rv))
             return el
-        elif isinstance(rv, RestsourceValueObjectCollection):
+        elif isinstance(rv, ObjectCollection):
             el = ET.Element(rv.value['name'])
             for i,x in enumerate(rv.value['collection']):
                 el.insert(i, cls.format_restsourcevalue(x))

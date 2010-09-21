@@ -9,10 +9,10 @@ except ImportError:
 
 from datetime import datetime, date
 
-from ..restsource_value import (RestsourceValueUnicode, RestsourceValueBytes,
-                                RestsourceValueInteger, RestsourceValueFloat,
-                                RestsourceValueDate, RestsourceValueDatetime,
-                                RestsourceValueObject, RestsourceValueObjectCollection)
+from ..restsource_value import (Unicode, Bytes,
+                                Integer, Float,
+                                Date, Datetime,
+                                Object, ObjectCollection)
 from . import Restponder
 
 __all__ = 'PythonRestponder',
@@ -45,15 +45,15 @@ class PythonRestponder(Restponder):
     def format_restsourcevalue(cls, rv):
         if rv is None:
             return None
-        elif isinstance(rv, (RestsourceValueUnicode, RestsourceValueBytes,
-                             RestsourceValueInteger, RestsourceValueFloat)):
+        elif isinstance(rv, (Unicode, Bytes,
+                             Integer, Float)):
             return rv.value
-        elif isinstance(rv, (RestsourceValueDate, RestsourceValueDatetime)):
+        elif isinstance(rv, (Date, Datetime)):
             return rv.value.isoformat()
-        elif isinstance(rv, RestsourceValueObject):
+        elif isinstance(rv, Object):
             return { rv.value['name']: dict((cls.format_restsourcevalue(k), cls.format_restsourcevalue(v))
                                             for (k,v) in rv.value['data'].items()) }
-        elif isinstance(rv, RestsourceValueObjectCollection):
+        elif isinstance(rv, ObjectCollection):
             return { rv.value['name']: [cls.format_restsourcevalue(x) for x in rv.value['collection']] }
         raise TypeError(type(rv))
 
