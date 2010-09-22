@@ -1,14 +1,13 @@
 # -*- coding: utf8 -*-
 
 from __future__ import absolute_import
-
+from datetime import date, datetime
 import xml.etree.ElementTree as ET
 
-from ..restsource_value import (Unicode, Bytes,
-                                Integer, Float,
-                                Date, Datetime,
-                                Object, ObjectCollection)
+from django.utils.encoding import force_unicode
+
 from . import Restponder
+from ..robject import RObject, RObjectList
 
 __all__ = 'XMLRestponder',
 
@@ -39,55 +38,52 @@ class XMLRestponder(Restponder):
 
     def _format_payload(self, payload):
         el = ET.Element(u"payload")
-        p = self.format_restsourcevalue(payload)
-        if p:
-            el.insert(0, p)
+        if payload:
+            el.insert(0, self._format_robject(payload))
         return el
 
-    @classmethod
-    def _format_simple_restsourcevalue_as_text(cls, rv):
-        if rv is None:
-            return None
-        if isinstance(rv, (Unicode, Bytes)):
-            return rv.value
-        elif isinstance(rv, (Integer, Float)):
-            return str(rv.value)
-        elif isinstance(rv, (Date, Datetime)):
-            return rv.value.isoformat()
-        raise TypeError(type(rv))
 
-    @classmethod
-    def _format_simple_restsourcevalue_as_element(cls, name, rv):
-        el = ET.Element(name)
-        el.text = cls._format_simple_restsourcevalue_as_text(rv)
-        return el
-
-    @classmethod
-    def format_restsourcevalue(cls, rv):
-        if rv is None:
+    def _format_robject(self, ro):
+        if ro is None:
             return None
-        if isinstance(rv, Object):
-            el = ET.Element(rv.value['name'])
-            attributes, data = rv.value['primary_fields'], dict((k.value, v) for (k,v) in rv.value['data'].items())
-            for attr in attributes:
-                el.set(attr, cls._format_simple_restsourcevalue_as_text(data[attr]))
-            for i,(k,rv) in enumerate(((x,y) for (x,y) in data.items() if not x in attributes)):
-                if rv is None:
-                    continue
-                if isinstance(rv, (Unicode, Bytes,
-                                   Integer, Float,
-                                   Date, Datetime)):
-                    el.insert(i, cls._format_simple_restsourcevalue_as_element(k, rv))
-                elif isinstance(rv, (Object, ObjectCollection)):
-                    el.insert(i, cls.format_restsourcevalue(rv))
+
+        # If ro.name is None, then we are being recursevily called
+        # and the caller will override this name in [AAA] later
+        el = ET.Element(force_unicode(ro.name))
+
+        if isinstance(ro, RObject):
+            for attr in ro.special_keys:
+                el.set(attr, self._format_simple_value_as_text(ro[attr]))
+            for i,(k,v) in enumerate((x,y) for (x,y) in ro.iteritems() if not x in ro.special_keys):
+                if isinstance(v, (RObject, RObjectList)):
+                    _child = self._format_robject(v)
+                    _child.tag = force_unicode(k) # <-- [AAA]
+                    el.insert(i, _child)
                 else:
-                    raise TypeError(type(rv))
+                    el.insert(i, self._format_simple_pair_as_element(k, v))
             return el
-        elif isinstance(rv, ObjectCollection):
-            el = ET.Element(rv.value['name'])
-            for i,x in enumerate(rv.value['collection']):
-                el.insert(i, cls.format_restsourcevalue(x))
+
+        elif isinstance(ro, RObjectList):
+            for i,x in enumerate(ro):
+                assert x.name is not None, u"I can't think of a situation where this could happen. Report this please."
+                el.insert(i, self._format_robject(x))
             return el
-        raise TypeError(type(rv))
+
+        raise TypeError(ro)
 
 
+    def _format_simple_value_as_text(self, value):
+        if value is None:
+            return None
+        if isinstance(value, (date, datetime)):
+            return force_unicode(value.isoformat())
+        elif isinstance(value, (unicode, str, int, long, float)):
+            return force_unicode(value)
+        else:
+            raise TypeError(value)
+
+
+    def _format_simple_pair_as_element(self, name, value):
+        el = ET.Element(force_unicode(name))
+        el.text = self._format_simple_value_as_text(value)
+        return el

@@ -9,10 +9,7 @@ except ImportError:
 
 from datetime import datetime, date
 
-from ..restsource_value import (Unicode, Bytes,
-                                Integer, Float,
-                                Date, Datetime,
-                                Object, ObjectCollection)
+from ..restsource import RObject, RObjectList
 from . import Restponder
 
 __all__ = 'PythonRestponder',
@@ -30,7 +27,7 @@ class PythonRestponder(Restponder):
     def _format_restponse(self, restponse):
         out = {
             "status": restponse.status,
-            "payload": self.format_restsourcevalue(restponse.payload) }
+            "payload": self._format_payload(restponse.payload) }
         if restponse.info:
             out["info"] = restponse.info
         if restponse.links:
@@ -41,21 +38,31 @@ class PythonRestponder(Restponder):
                 out['links'].append({'link': d})
         return out
 
-    @classmethod
-    def format_restsourcevalue(cls, rv):
-        if rv is None:
-            return None
-        elif isinstance(rv, (Unicode, Bytes,
-                             Integer, Float)):
-            return rv.value
-        elif isinstance(rv, (Date, Datetime)):
-            return rv.value.isoformat()
-        elif isinstance(rv, Object):
-            return { rv.value['name']: dict((cls.format_restsourcevalue(k), cls.format_restsourcevalue(v))
-                                            for (k,v) in rv.value['data'].items()) }
-        elif isinstance(rv, ObjectCollection):
-            return { rv.value['name']: [cls.format_restsourcevalue(x) for x in rv.value['collection']] }
-        raise TypeError(type(rv))
+    def _format_payload(self, payload):
+        if payload is not None:
+            return self._format_robject(payload)
+
+    def _format_robject(self, ro):
+        if isinstance(ro, RObjectList):
+            if ro.name is None:
+                return [self._format_robject(x) for x in ro]
+            return { ro.name: [self._format_robject(x) for x in ro] }
+        elif isinstance(ro, RObject):
+            d = {}
+            for k,v in ro.iteritems():
+                if isinstance(v, (RObject, RObjectList)):
+                    d[k] = self._format_robject(v)
+                elif isinstance(v, (date, datetime)):
+                    d[k] = v.isoformat()
+                elif isinstance(v, (unicode, str, int, long, float)) or v is None:
+                    d[k] = v
+                else:
+                    raise TypeError(v)
+            if ro.name is None:
+                return d
+            return { ro.name: d }
+        else:
+            raise TypeError(ro)
 
 
 class PythonPickleRestponder(PythonRestponder):

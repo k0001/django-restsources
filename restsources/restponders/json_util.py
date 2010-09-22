@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import sys
 
-__all__ = 'json'
+__all__ = 'json', 'JSON'
 
 
 MODULES = (('czjson',                  'dumps',    'loads'),

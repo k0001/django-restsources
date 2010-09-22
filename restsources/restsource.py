@@ -5,10 +5,11 @@ from django.db import models
 from django.db.models.query import QuerySet
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.core.paginator import Paginator, InvalidPage
+from django.utils.encoding import force_unicode
 
 from .restponse import Restponse, RESTPONSE_STATUS
-from .restsource_value import RestsourceValue, Object, ObjectCollection
-from restsources.exceptions import ResourceDoesNotExist, MultipleResourcesExist
+from .robject import RObject, RObjectList
+from .exceptions import ResourceDoesNotExist, MultipleResourcesExist
 
 __all__ = 'Restsource',
 
@@ -71,11 +72,6 @@ class Restsource(object):
             value = getattr(obj, field_name)
         return value
 
-    def _get_field_restsourcevalue(self, obj, field_name):
-        value = self._get_field_value(obj, field_name)
-        if value is not None:
-            value = RestsourceValue.get_for_value(value)
-        return value
 
     def _get_fields_values(self, obj, primary_fields_only=False):
         field_names = set(self.primary_fields)
@@ -87,34 +83,23 @@ class Restsource(object):
             values[field_name] = self._get_field_value(obj, field_name)
         return values
 
-    def _get_fields_restsourcevalues(self, obj, primary_fields_only=False):
-        if isinstance(obj, models.Model):
-            return self._get_fields_restsourcevalues_for_model(obj, primary_fields_only)
-        restsourcevalues = {}
-        for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
-            restsourcevalues[RestsourceValue.get_for_value(k)] = Object.get_for_value(v)
-        return restsourcevalues
 
-    def _get_fields_restsourcevalues_for_model(self, obj, primary_fields_only=False):
-        restsourcevalues = {}
+    def _get_robject(self, name, obj, primary_fields_only=False):
+        if name is not None:
+            name = force_unicode(name)
+        ro = RObject(name)
         for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
-            if v is None:
-                rv = None
-            elif isinstance(v, models.Manager):
-                # Reverse FK or Reverse M2M
-                rv = ObjectCollection(k, [self._rel(k).dump_single(x) for x in v.all()])
-            else:
-                try:
-                    rv = Object.get_for_value(v)
-                except TypeError:
-                    field, model, direct, m2m = obj._meta.get_field_by_name(k)
-                    if isinstance(field, models.ForeignKey):
-                        # Foreign Key
-                        rv = self._rel(k).dump_single(v)
-                    else:
-                        raise
-            restsourcevalues[RestsourceValue.get_for_value(k)] = rv
-        return restsourcevalues
+            k = force_unicode(k)
+            try:
+                ro[k] = v
+            except TypeError:
+                if isinstance(v, models.Manager):
+                    # Reverse FK or Reverse M2M
+                    ro[k] = self._rel(k).dump_collection(v.all(), named=False)
+                elif isinstance(v, models.Model):
+                    ro[k] = self._rel(k).dump_single(v, named=False)
+        ro.special_keys = tuple(set(ro.keys()) & set(self.primary_fields))
+        return ro
 
 
     def _rel(self, name):
@@ -133,14 +118,13 @@ class Restsource(object):
 
     ### Dumping Restsources
 
-    def dump_single(self, obj):
-        data = self._get_fields_restsourcevalues(obj, self._primary_fields_only)
-        used_primary_fields = set(self.primary_fields) - set(self.excluded)
-        return Object(self.name, data, used_primary_fields)
+    def dump_single(self, obj, named=True):
+        name = self.name if named else None
+        return self._get_robject(name, obj, self._primary_fields_only)
 
-    def dump_collection(self, objs):
-        data = [self.dump_single(x) for x in objs]
-        return ObjectCollection(self.name_plural, data)
+    def dump_collection(self, objs, named=True):
+        name = self.name_plural if named else None
+        return RObjectList(name, [self.dump_single(x) for x in objs])
 
 
     ### HTTP requests handling
@@ -195,5 +179,4 @@ class Restsource(object):
             restponse.links.append(('%s?%s' % (request.path, qd.urlencode()), {'rel': 'next'}))
 
         return restponse
-
 

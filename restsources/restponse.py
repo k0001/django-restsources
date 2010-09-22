@@ -1,9 +1,10 @@
 # -*- coding: utf8 -*-
 
-from .restsource_value import Object, ObjectCollection
+from .robject import RObject, RObjectList
 from .exceptions import ResourceDoesNotExist, MultipleResourcesExist
 
 __all__ = 'Restponse', 'RESTPONSE_STATUS',
+
 
 class RESTPONSE_STATUS(object):
     OK = "OK"
@@ -29,7 +30,7 @@ class Restponse(object):
         self.links = links or []
 
     def _set_payload(self, value):
-        if not isinstance(value, (Object, ObjectCollection)) and value is not None:
+        if not isinstance(value, (RObject, RObjectList)) and value is not None:
             raise TypeError(type(value))
         self._payload = value
 
