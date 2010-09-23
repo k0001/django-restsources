@@ -19,7 +19,7 @@ class PythonRestponder(Restponder):
     name = 'py'
     mimetype = 'application/x-python'
 
-    def write_body(self, restponse, response):
+    def write_body(self, request, response, restponse):
         data = self._format_restponse(restponse)
         response.write(unicode(data).encode(self.encoding))
         return response
@@ -73,7 +73,7 @@ class PythonPickleRestponder(PythonRestponder):
         self.protocol = protocol
         super(PythonPickleRestponder, self).__init__(*args, **kwargs)
 
-    def write_body(self, restponse, response):
+    def write_body(self, request, response, restponse):
         data = self._format_restponse(restponse)
         response.write(pickle.dumps(data, self.protocol))
         return response

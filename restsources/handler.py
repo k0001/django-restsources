@@ -9,7 +9,7 @@ from django.http import HttpResponse, Http404
 from django.db.models import ObjectDoesNotExist
 from django.views.decorators.csrf import csrf_exempt
 
-from .restponders import RestponderSet
+from .restponders import RestponderSet, RestponderRequestValidationError
 from .restponse import Restponse, RESTPONSE_STATUS
 from .restsource import Restsource
 from .exceptions import ResourceDoesNotExist, MultipleResourcesExist
@@ -70,7 +70,7 @@ class Handler(object):
         if not restponder:
             s = u"\n".join(u" - %s: %s" % (x.name, x.mimetype) for x in self._restponders)
             return HttpResponse(u"Can't satisfy requested media type. Valid options:\n%s" % s,
-                                status=400, mimetype='text/plain')
+                                status=406, mimetype='text/plain')
 
         # Method selection
         if request.method == 'HEAD':
@@ -97,6 +97,13 @@ class Handler(object):
                 # Handle PUT entity just like Django does for POST
                 load_put_and_files(request)
 
+        # Request restponder validation
+        try:
+            restponder.validate_request(request)
+        except RestponderRequestValidationError, e:
+            return HttpResponse(u"Invalid '%s: %s' request: %s" % (restponder.name, restponder.mimetype, unicode(e)),
+                                status=404, mimetype='text/plain')
+
         # Restponse
         try:
             restponse = meth(options, request, kwargs)
@@ -112,17 +119,14 @@ class Handler(object):
             restponse = Restponse(status=RESTPONSE_STATUS.ERROR_INTERNAL, http_status=500)
 
         # HTTP Response
-        response = HttpResponse()
-        restponder.write_headers(restponse, response)
-        if request.method != 'HEAD':
-            restponder.write_body(restponse, response)
-        return response
+        return self.make_response(request, restponse, restponder)
+
 
     def select_restponder(self, options, request, params):
         if options["restponder_name_uparam"]:
             name = params.pop(options["restponder_name_uparam"])
         else:
-            name = request.REQUEST.get(options["restponder_name_qparam"])
+            name = request.GET.get(options["restponder_name_qparam"])
 
         if name:
             # The user explicitly requested a representation format, so it's ok to 404 if not available
@@ -146,6 +150,14 @@ class Handler(object):
         # From [RFC 2616 Section 14.1]:
         # If no Accept header field is present, then it is assumed that the client accepts all media types.
         return self._fallback_restponder
+
+
+    def make_response(self, request, restponse, restponder):
+        response = HttpResponse()
+        restponder.write_headers(request, response, restponse)
+        if request.method != 'HEAD':
+            restponder.write_body(request, response, restponse)
+        return response
 
 
     def log_exception(self, stderr, exc_info):

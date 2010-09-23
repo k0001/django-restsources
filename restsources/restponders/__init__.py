@@ -1,6 +1,10 @@
 # -*- coding: utf8 -*-
 
-__all__ = 'Restponder', 'RestponderSet'
+__all__ = 'Restponder', 'RestponderSet', 'RestponderRequestValidationError'
+
+
+class RestponderRequestValidationError(Exception):
+    """Invalid request for a Restponder"""
 
 
 class Restponder(object):
@@ -15,13 +19,17 @@ class Restponder(object):
     def content_type(self):
         return '%s; charset=%s' % (self.mimetype, self.encoding)
 
-    def write_headers(self, restponse, response):
+    def validate_request(self, request):
+        """Returns None if the ``request`` is valid, otherwise returns a proper ``Restponse`` object"""
+        pass
+
+    def write_headers(self, request, response, restponse):
         response.status_code = restponse.http_status
         response['Content-Type'] = self.content_type
         for k,v in restponse.http_headers:
             response[k] = v
 
-    def write_body(self, restponse, response):
+    def write_body(self, request, response, restponse):
         raise NotImplementedError
 
     @classmethod
