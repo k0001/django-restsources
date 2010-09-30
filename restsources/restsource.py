@@ -23,8 +23,12 @@ class Restsource(object):
     relations = None
 
 
-    def __init__(self, primary_fields_only=False, excluded=()):
-        self.excluded = tuple(set(tuple(self.excluded) + tuple(excluded)))
+    def __init__(self, primary_fields_only=False, excluded=None, fields=None, primary_fields=None):
+        if fields:
+            self.fields = fields
+        if primary_fields:
+            self.primary_fields = primary_fields
+        self.excluded = tuple(set(tuple(self.excluded) + tuple(excluded or ())))
         self._primary_fields_only = primary_fields_only
 
 
