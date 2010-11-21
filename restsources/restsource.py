@@ -20,7 +20,7 @@ class Restsource(object):
     fields = ()
     excluded = 'pk',
     primary_fields = ()
-    relations = None
+    relations = {}
 
 
     def __init__(self, primary_fields_only=False, excluded=None, fields=None, primary_fields=None):
@@ -99,26 +99,11 @@ class Restsource(object):
             except TypeError:
                 if isinstance(v, models.Manager):
                     # Reverse FK or Reverse M2M
-                    ro[k] = self._rel(k).dump_collection(v.all(), named=False)
+                    ro[k] = self.relations[k].dump_collection(v.all(), named=False)
                 elif isinstance(v, models.Model):
-                    ro[k] = self._rel(k).dump_single(v, named=False)
+                    ro[k] = self.relations[k].dump_single(v, named=False)
         ro.special_keys = tuple(set(ro.keys()) & set(self.primary_fields))
         return ro
-
-
-    def _rel(self, name):
-        """Returns the Restsource asociated with a relationship"""
-        try:
-            return self.relations[name]
-        except KeyError:
-            raise RuntimeError(u"You need to specify a Restource for %s in %s.relations" % (name, self))
-        except TypeError:
-            # we enter here only the first time if self.relations isn't a dict, and we populate it.
-            if isinstance(self.relations, types.MethodType):
-                self.relations = self.relations() # overwrite
-            elif self.relations is None:
-                self.relations = {}
-            return self._rel(name)
 
     ### Dumping Restsources
 
