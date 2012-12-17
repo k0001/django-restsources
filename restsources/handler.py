@@ -47,13 +47,27 @@ class Handler(object):
         #
         # page_qparam: (default 'page')
         #   Querystring parameter name for page number selection if pagination is enabled (see paginate_by).
+        #
+        # field_names_qparam: (default 'fields')
+        #   Querystring parameter name for field inclusion/exclusion.
+        #
+        #   Input format:
+        #
+        #     fields       ::= <field> | <field> "," <fields>
+        #     field        ::= <field_prefix> <field_name>
+        #     field_prefix ::= "+" | "-" | ""
+        #
+        #   Field names prefixed with '-' are excluded from the defaults.
+        #   Field names prefixed with '+' are included along with the defaults (unless they have been excluded too).
+        #   Field names without prefix override the defaults, explicit exclusions and inclusions further apply.
 
         self._options = {
             'single': False,
             'restponder_name_uparam': None,
             'restponder_name_qparam': 'format',
             'paginate_by': None,
-            'page_qparam': 'page'
+            'page_qparam': 'page',
+            'field_names_qparam': 'fields'
         }
         if options:
             self._options.update(options)

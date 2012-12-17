@@ -24,11 +24,9 @@ class Restsource(object):
 
 
     def __init__(self, primary_fields_only=False, excluded=None, fields=None, primary_fields=None):
-        if fields:
-            self.fields = fields
-        if primary_fields:
-            self.primary_fields = primary_fields
-        self.excluded = tuple(set(tuple(self.excluded) + tuple(excluded or ())))
+        self.fields = set(fields or self.fields)
+        self.excluded = set(self.excluded) | set(excluded or ())
+        self.primary_fields = set(primary_fields or self.primary_fields)
         self._primary_fields_only = primary_fields_only
 
 
@@ -77,55 +75,68 @@ class Restsource(object):
         return value
 
 
-    def _get_fields_values(self, obj, primary_fields_only=False):
-        field_names = set(self.primary_fields)
-        if not primary_fields_only:
-            field_names.update(self.fields)
-        field_names.difference_update(self.excluded)
+    def _get_fields_values(self, obj, field_names):
         values = {}
         for field_name in field_names:
             values[field_name] = self._get_field_value(obj, field_name)
         return values
 
 
-    def _get_robject(self, name, obj, primary_fields_only=False):
+    def _get_robject(self, name, obj, field_names):
         if name is not None:
             name = force_unicode(name)
         ro = RObject(name)
-        for k,v in self._get_fields_values(obj, primary_fields_only).iteritems():
+        for k,v in self._get_fields_values(obj, field_names).iteritems():
             k = force_unicode(k)
             try:
                 ro[k] = v
             except TypeError:
                 if isinstance(v, models.Manager):
                     # Reverse FK or Reverse M2M
-                    ro[k] = self.relations[k].dump_collection(v.all(), named=False)
+                    ro[k] = self.relations[k].dump_collection(v.all(), self.primary_fields, named=False)
                 elif isinstance(v, models.Model):
-                    ro[k] = self.relations[k].dump_single(v, named=False)
-        ro.special_keys = tuple(set(ro.keys()) & set(self.primary_fields))
+                    ro[k] = self.relations[k].dump_single(v, self.primary_fields, named=False)
+        ro.special_keys = tuple(set(ro.keys()) & self.primary_fields)
         return ro
 
     ### Dumping Restsources
 
-    def dump_single(self, obj, named=True):
+    def dump_single(self, obj, field_names, named=True):
         name = self.name if named else None
-        return self._get_robject(name, obj, self._primary_fields_only)
+        return self._get_robject(name, obj, field_names)
 
-    def dump_collection(self, objs, named=True):
+    def dump_collection(self, objs, field_names, named=True):
         name = self.name_plural if named else None
-        return RObjectList(name, [self.dump_single(x) for x in objs])
+        return RObjectList(name, [self.dump_single(x, field_names) for x in objs])
 
+    def _default_field_names(self):
+        field_names = self.primary_fields
+        if not self._primary_fields_only:
+            field_names = field_names | self.fields
+        return field_names - self.excluded
+
+    def _requested_field_names(self, options, request):
+        field_names = self._default_field_names()
+        fnq = request.REQUEST.get(options['field_names_qparam'], '').strip()
+        if fnq:
+            fns = set(x for x in (y.strip() for y in fnq.split(',')) if x)
+            field_names  = set(x for x in fns if x[0].isalpha()) or field_names
+            field_names |= set(x[1:] for x in fns if x[0] == '+')
+            field_names -= set(x[1:] for x in fns if x[0] == '-')
+        return field_names | self.primary_fields
 
     ### HTTP requests handling
-
     def GET(self, options, request, params):
+        objs = self.filter(self.queryset(), request, **params)
+        field_names = self._requested_field_names(options, request)
         if options['single']:
             return Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
-                             payload=self.dump_single(self.get(self.queryset(), request, **params)))
-        objs = self.filter(self.queryset(), request, **params)
+                             payload=self.dump_single(self.get(obj), field_names))
         if options['paginate_by']:
-            return self._get_paginated_restponse(objs, options, request, params)
-        return Restponse(status=RESTPONSE_STATUS.OK, http_status=200, payload=self.dump_collection(objs))
+            return self._get_paginated_restponse(objs, field_names, options, request, params)
+        return Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
+                         payload=self.dump_collection(objs, field_names))
+
 
     def POST(self, options, request, params):
         raise NotImplementedError
@@ -138,7 +149,7 @@ class Restsource(object):
 
 
     # Utils
-    def _get_paginated_restponse(self, objs, options, request, params):
+    def _get_paginated_restponse(self, objs, field_names, options, request, params):
         assert request.method == 'GET', u"Paginating %s request not supported." % request.method
         page_qparam = options['page_qparam']
         try:
@@ -146,9 +157,10 @@ class Restsource(object):
             paginator = Paginator(objs, options['paginate_by'], allow_empty_first_page=True)
             page = paginator.page(page_num)
         except (ValueError, InvalidPage):
-            return Restponse(status=RESTPONSE_STATUS.ERROR_BAD_REQUEST, info=u"Invalid page.", http_status=400)
+            return Restponse(status=RESTPONSE_STATUS.ERROR_BAD_REQUEST,
+                             info=u"Invalid page.", http_status=400)
         restponse = Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
-                              payload=self.dump_collection(page.object_list))
+                              payload=self.dump_collection(page.object_list, field_names))
 
         ## Link headers
         qd = request.GET.copy()
