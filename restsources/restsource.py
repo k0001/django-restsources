@@ -123,6 +123,7 @@ class Restsource(object):
             field_names  = set(x for x in fns if x[0].isalpha()) or field_names
             field_names |= set(x[1:] for x in fns if x[0] == '+')
             field_names -= set(x[1:] for x in fns if x[0] == '-')
+            field_names &= self.fields
         return field_names | self.primary_fields
 
     ### HTTP requests handling
