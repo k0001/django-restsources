@@ -128,11 +128,12 @@ class Restsource(object):
 
     ### HTTP requests handling
     def GET(self, options, request, params):
-        objs = self.filter(self.queryset(), request, **params)
         field_names = self._requested_field_names(options, request)
         if options['single']:
+            obj = self.get(self.queryset(), request, **params)
             return Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
-                             payload=self.dump_single(self.get(obj), field_names))
+                             payload=self.dump_single(obj, field_names))
+        objs = self.filter(self.queryset(), request, **params)
         if options['paginate_by']:
             return self._get_paginated_restponse(objs, field_names, options, request, params)
         return Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
