@@ -91,11 +91,13 @@ class Restsource(object):
             try:
                 ro[k] = v
             except TypeError:
+                restsource = self.relations[k]
+                rdfn = restsource._default_field_names()
                 if isinstance(v, models.Manager):
                     # Reverse FK or Reverse M2M
-                    ro[k] = self.relations[k].dump_collection(v.all(), self.primary_fields, named=False)
+                    ro[k] = restsource.dump_collection(v.all(), rdfn, named=False)
                 elif isinstance(v, models.Model):
-                    ro[k] = self.relations[k].dump_single(v, self.primary_fields, named=False)
+                    ro[k] = restsource.dump_single(v, rdfn, named=False)
         ro.special_keys = tuple(set(ro.keys()) & self.primary_fields)
         return ro
 
