@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 import types
 
 from django.db import models
@@ -32,7 +32,7 @@ class Restsource(object):
 
     ### Querying
 
-    def queryset(self):
+    def queryset(self, field_names):
         """
         Default query set for this Resource.
 
@@ -40,9 +40,10 @@ class Restsource(object):
         whatever works for you as a "query set", just make sure you make good
         use of it in methods ``filter`` and ``get``.
         """
-        if self.model:
-            return self.model.objects.all()
-        raise NotImplementedError
+        if not self.model:
+            raise NotImplementedError
+        # TODO: be smarter when selecting related stuff
+        return self.model.objects.select_related(depth=1)
 
     def filter(self, queryset, request, **kwargs):
         """Returns a iterable of matching resource objects"""
@@ -67,8 +68,9 @@ class Restsource(object):
     ### Field values
 
     def _get_field_value(self, obj, field_name):
-        if hasattr(self, 'get_%s' % field_name):
-            meth = getattr(self, 'get_%s' % field_name)
+        getter_name = 'get_%s' % field_name
+        if hasattr(self, getter_name):
+            meth = getattr(self, getter_name)
             value = meth(obj)
         else:
             value = getattr(obj, field_name)
@@ -86,13 +88,16 @@ class Restsource(object):
         if name is not None:
             name = force_unicode(name)
         ro = RObject(name)
-        for k,v in self._get_fields_values(obj, field_names).iteritems():
+        no_deep_fnames = set(x.split('.',1)[0] for x in field_names)
+        for k,v in self._get_fields_values(obj, no_deep_fnames).iteritems():
             k = force_unicode(k)
             try:
                 ro[k] = v
             except TypeError:
                 restsource = self.relations[k]
-                rdfn = restsource._default_field_names()
+                rdfn = set(restsource._default_field_names()) \
+                     | set(x.split('.',1)[1] for x in field_names
+                           if x.startswith(k+'.'))
                 if isinstance(v, models.Manager):
                     # Reverse FK or Reverse M2M
                     ro[k] = restsource.dump_collection(v.all(), rdfn, named=False)
@@ -132,10 +137,10 @@ class Restsource(object):
     def GET(self, options, request, params):
         field_names = self._requested_field_names(options, request)
         if options['single']:
-            obj = self.get(self.queryset(), request, **params)
+            obj = self.get(self.queryset(field_names), request, **params)
             return Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
                              payload=self.dump_single(obj, field_names))
-        objs = self.filter(self.queryset(), request, **params)
+        objs = self.filter(self.queryset(field_names), request, **params)
         if options['paginate_by']:
             return self._get_paginated_restponse(objs, field_names, options, request, params)
         return Restponse(status=RESTPONSE_STATUS.OK, http_status=200,
