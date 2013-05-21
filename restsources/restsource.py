@@ -158,12 +158,29 @@ class Restsource(object):
 
 
     # Utils
+
     def _get_paginated_restponse(self, objs, field_names, options, request, params):
         assert request.method == 'GET', u"Paginating %s request not supported." % request.method
         page_qparam = options['page_qparam']
+        paginate_by_qparam = options['paginate_by_qparam']
         try:
-            page_num = int(params.get(page_qparam, request.REQUEST.get(page_qparam, 1)))
-            paginator = Paginator(objs, options['paginate_by'], allow_empty_first_page=True)
+            g = lambda qparam,default: params.get(qparam, request.REQUEST.get(qparam, default)))
+
+            # page_num: look first in path info, then in query string, then default to 1
+            page_num = int(g(page_qparam, 1))
+            if page_num < 1:
+                raise ValueError(u'page: %d' % page_nume)
+
+            # paginate_by: if allowed, look first in path info, then in query string, otherwise use the default.
+            if options['paginate_by'] is None:
+                paginate_by = options['paginate_by']
+            else:
+                paginate_by = int(g(paginate_by_qparam, options['paginate_by']))
+                if paginate_by < 1 or (options['paginate_by_max'] is not None and
+                                       paginate_by <= options['paginate_by_max']):
+                    raise ValueError(u'paginate_by: %d' % paginate_by)
+
+            paginator = Paginator(objs, paginate_by, allow_empty_first_page=True)
             page = paginator.page(page_num)
         except (ValueError, InvalidPage):
             return Restponse(status=RESTPONSE_STATUS.ERROR_BAD_REQUEST,
@@ -173,6 +190,9 @@ class Restsource(object):
 
         ## Link headers
         qd = request.GET.copy()
+        if paginate_by is not None:
+            qd[paginate_by_qparam] = paginate_by
+
         # rel first
         qd[page_qparam] = 1
         restponse.links.append(('%s?%s' % (request.path, qd.urlencode()), {'rel': 'first'}))

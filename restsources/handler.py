@@ -43,7 +43,16 @@ class Handler(object):
         #   URL parameter name for restponder selection. If specified, overrides restponder_name_qparam
         #
         # paginate_by: (default None)
-        #   If different than None, then paginate the results.
+        #   If different than None, then paginate the results by the specified number.
+        #
+        # paginate_by_max: (default None)
+        #   Maximum number of items to provide by page, if 'paginate_by' is specified. If this is 'None', then no limit
+        #   is enforced.
+        #
+        # paginate_by_qparam: (default 'paginate_by')
+        #   Querystring parameter name for number of items per page selection if pagination is enabled (see paginate_by).
+        #   This number must be greater than 0 and less than or equal to 'paginate_by_max', otherwise is an error
+        #   response is given.
         #
         # page_qparam: (default 'page')
         #   Querystring parameter name for page number selection if pagination is enabled (see paginate_by).
@@ -66,6 +75,8 @@ class Handler(object):
             'restponder_name_uparam': None,
             'restponder_name_qparam': 'format',
             'paginate_by': None,
+            'paginate_by_max': None,
+            'paginate_by_qparam': 'paginate_by',
             'page_qparam': 'page',
             'field_names_qparam': 'fields'
         }
