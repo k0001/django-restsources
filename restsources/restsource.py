@@ -164,7 +164,7 @@ class Restsource(object):
         page_qparam = options['page_qparam']
         paginate_by_qparam = options['paginate_by_qparam']
         try:
-            g = lambda qparam,default: params.get(qparam, request.REQUEST.get(qparam, default)))
+            g = lambda qparam,default: params.get(qparam, request.REQUEST.get(qparam, default))
 
             # page_num: look first in path info, then in query string, then default to 1
             page_num = int(g(page_qparam, 1))
