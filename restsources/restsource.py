@@ -177,9 +177,8 @@ class Restsource(object):
             else:
                 paginate_by = int(g(paginate_by_qparam, options['paginate_by']))
                 if paginate_by < 1 or (options['paginate_by_max'] is not None and
-                                       paginate_by <= options['paginate_by_max']):
+                                       paginate_by >= options['paginate_by_max']):
                     raise ValueError(u'paginate_by: %d' % paginate_by)
-
             paginator = Paginator(objs, paginate_by, allow_empty_first_page=True)
             page = paginator.page(page_num)
         except (ValueError, InvalidPage):
